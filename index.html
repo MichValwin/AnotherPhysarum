@@ -1,0 +1,172 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physarum sim</title>
+
+	<!--Using pixi for webGL support-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.1.3/pixi.min.js"></script>
+
+	<script src="./js/physarum.js"></script>
+
+	<script>
+		window.onload = function(){
+			var CANVAS_WIDTH = 256;
+			var CANVAS_HEIGHT = 256;
+			
+			let type = "WebGL"
+			if(!PIXI.utils.isWebGLSupported()){
+				type = "canvas"
+			}
+
+			//Create a Pixi Application
+			var gameloopRunning = 1;
+			var app = new PIXI.Application({width: CANVAS_WIDTH, height: CANVAS_HEIGHT});
+
+			//Add the canvas that Pixi automatically created for you to the HTML document
+			document.getElementById('physarum-canvas').append(app.view);
+			
+			
+			
+			//Implement physarum simulation
+			//2 2D maps
+			//A list containing all the cells (position, angle looking)
+			//2D map containing the trail map. Contains numbers [0.0 - 1.0]
+			//Apply mean filter over 9x9 to simulate diffusion
+			//Then apply decay multiply for a factor (tiny factor)
+			var numberCells = 5000;
+			var listCells = new Array(numberCells);
+			var width = CANVAS_WIDTH;
+			var height = CANVAS_HEIGHT;
+			var trailMap = new Float32Array(width * height);
+			var trailMapClone = new Float32Array(width * height);
+			var bufferTextureTrailMap = new Float32Array(width * height * 4);
+			populateTrailMap(trailMap, width, height);
+			populateTrailMap(trailMapClone, width, height);
+			populateCells(listCells, numberCells, width, height);
+			copyTrailMapTexture(listCells, trailMap, bufferTextureTrailMap, width, height);
+			
+			
+			
+			var options = {'sensorAngle' : 45.0, 'turnAngle': 45.0, 'sensorDistance': 2.0, 'moveOffset': 0.9, 'decay': 0.999};
+			
+			
+			//Update options
+			var sensorAngleElem = document.getElementById('sensorAngle');
+			if(!isNaN(sensorAngleElem.value)){
+				options.sensorAngle = sensorAngleElem.value;
+			}
+			sensorAngleElem.addEventListener("change", function(){
+				if(!isNaN(this.value)){
+					options.sensorAngle = this.value;
+				}
+			}, false);
+			
+			var sensorDistanceElem = document.getElementById('sensorDistance');
+			if(!isNaN(sensorDistanceElem.value)){
+				options.sensorDistance = sensorDistanceElem.value;
+			}
+			sensorDistanceElem.addEventListener("change", function(){
+				if(!isNaN(this.value)){
+					options.sensorDistance = this.value;
+				}
+			}, false);
+		
+			var turnAngleElem = document.getElementById('turnAngle');
+			if(!isNaN(turnAngleElem.value)){
+				options.turnAngle = parseFloat(turnAngleElem.value);
+			}
+			turnAngleElem.addEventListener("change", function(){
+				if(!isNaN(this.value)){
+					options.turnAngle = parseFloat(this.value);
+				}
+			}, false);
+			
+			var moveOffsetElem = document.getElementById('moveOffset');
+			if(!isNaN(moveOffsetElem.value)){
+				options.moveOffset = moveOffsetElem.value;
+			}
+			moveOffsetElem.addEventListener("change", function(){
+				if(!isNaN(this.value)){
+					options.moveOffset = this.value;
+				}
+			}, false);
+			
+			var decayElem = document.getElementById('decay');
+			if(!isNaN(decayElem.value)){
+				options.decay = decayElem.value;
+			}
+			decayElem.addEventListener("change", function(){
+				if(!isNaN(this.value)){
+					options.decay = this.value;
+				}
+			}, false);
+			
+			var stopPlayElem = document.getElementById('button-stop-play');
+			stopPlayElem.addEventListener('click', function(evt){
+				if(gameloopRunning === 1){
+					app.ticker.stop();
+					gameloopRunning = 0;
+				}else{
+					app.ticker.start();
+					gameloopRunning = 1;
+				}
+			});
+
+
+			
+			var texture = PIXI.Texture.fromBuffer(bufferTextureTrailMap, width, height);
+			var textureAllScreen = new PIXI.Sprite(texture);
+			
+			PIXI.loader.load(setup);
+
+			function setup(){
+				app.stage.addChild(textureAllScreen);
+				
+				gameloopRunning = 1;
+				app.ticker.add(delta => gameLoop(delta));
+			}
+			
+			function gameLoop(deltaTime){
+				paintRectangle(trailMap, width, height, 10, 10, 10, 10);
+				paintRectangle(trailMap, width, height, 240, 10, 10, 10);
+				paintRectangle(trailMap, width, height, 240, 240, 10, 10);
+				paintRectangle(trailMap, width, height, 200, 128, 10, 10);
+				
+				updatePhysarum(listCells, trailMap, trailMapClone, options, width, height);
+				copyTrailMapTexture(listCells, trailMap, bufferTextureTrailMap, width, height);
+				
+				texture.update();
+				
+			}
+			
+		};
+			
+	</script>
+</head>
+
+
+
+<body>
+	<div id="physarum-canvas"></div>
+		<label>Sensor angle:
+			<input type="text" id="sensorAngle" value="45.0">
+		</label>
+		<label>Sensor distance:
+			<input type="text" id="sensorDistance" value="2.0">
+		</label>
+		<label>Turn angle:
+			<input type="text" id="turnAngle" value="45.0">
+		</label>
+		<label>Move offset:
+			<input type="text" id="moveOffset" value="0.9">
+		</label>
+		<label>Decay:
+			<input type="text" id="decay" value="0.992">
+		</label>
+		<label>Stop/Play:
+			<input type="button" id="button-stop-play" value="Stop/Play">
+		</label>
+</body>
+</html>
