@@ -189,14 +189,15 @@ function updatePhysarum(cells, map, mapClone, optionsPhysarum, mapWidth, mapHeig
         }
     }
     
+    /*
     for(let i = 0; i < mapHeight; i++){
         for(let j = 0; j < mapWidth; j++){
-            //map[mapWidth * i + j] = mapClone[mapWidth * i + j];
             if(mapClone[mapWidth * i + j] > 1.0 || mapClone[mapWidth * i + j] < 0.0){
-                //console.log(mapClone[width * i + j]);
+                console.log(mapClone[width * i + j]);
             }
         }
     }
+    */
     
     
     
